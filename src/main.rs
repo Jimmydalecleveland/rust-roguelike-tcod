@@ -3,7 +3,10 @@ use tcod::console::*;
 
 const SCREEN_WIDTH: i32 = 80;
 const SCREEN_HEIGHT: i32 = 50;
-
+const MAP_WIDTH: i32 = 80;
+const MAP_HEIGHT: i32 = 45;
+const COLOR_DARK_WALL: Color = Color { r: 0, g: 0, b: 100 };
+const COLOR_DARK_GROUND: Color = Color { r: 50, g: 50, b: 150 };
 const LIMIT_FPS: i32 = 20;
 
 struct Tcod {
@@ -13,6 +16,7 @@ struct Tcod {
 
 /// This is a generic object: the player, a monster, an item, the stairs...
 /// It's always represented by a character on screen.
+#[derive(Debug)]
 struct Object {
     x: i32,
     y: i32,
@@ -36,6 +40,30 @@ impl Object {
     pub fn draw(&self, con: &mut dyn Console) {
         con.set_default_foreground(self.color);
         con.put_char(self.x, self.y, self.char, BackgroundFlag::None);
+    }
+}
+
+
+/// Tile for map and it's properties
+#[derive(Clone, Copy, Debug)]
+struct Tile {
+    blocked: bool,
+    block_site: bool,
+}
+
+impl Tile {
+    pub fn empty() -> Self {
+        Tile {
+            blocked: false,
+            block_site: false,
+        }
+    }
+
+    pub fn wall() -> Self {
+        Tile {
+            blocked: true,
+            block_site: true,
+        }
     }
 }
 
