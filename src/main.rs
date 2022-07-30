@@ -67,6 +67,12 @@ impl Tile {
     }
 }
 
+type Map = Vec<Vec<Tile>>;
+
+struct Game {
+    map: Map,
+}
+
 fn main() {
     tcod::system::set_fps(LIMIT_FPS);
     let root = Root::initializer()
@@ -133,4 +139,12 @@ fn handle_keys(tcod: &mut Tcod, player: &mut Object) -> bool {
     }
 
     false
+}
+
+fn make_map() -> Map {
+    let mut map = vec![vec![Tile::empty(); MAP_HEIGHT as usize]; MAP_WIDTH as usize];
+    map[30][22] = Tile::wall();
+    map[50][22] = Tile::wall();
+
+    map
 }
