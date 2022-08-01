@@ -202,8 +202,23 @@ fn make_map(player: &mut Object) -> Map {
             if rooms.is_empty() {
                 player.x = new_x;
                 player.y = new_y;
+            } else {
+                // center coordinates of previous room
+                let (prev_x, prev_y) = rooms[rooms.len() - 1].center();
+                
+                // coinflip (50/50 bool)
+                if rand::random() {
+                    create_h_tunnel(prev_x, new_x, prev_y, &mut map);
+                    create_v_tunnel(prev_y, new_y, new_x, &mut map);
+                } else {
+                    create_v_tunnel(prev_y, new_y, prev_x, &mut map);
+                    create_h_tunnel(prev_x, new_x, new_y, &mut map);
+                }
             }
         }
+
+        // add the new room to the list of rooms
+        rooms.push(new_room);
     }
 
     map
