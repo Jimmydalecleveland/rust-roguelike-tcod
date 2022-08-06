@@ -63,6 +63,7 @@ impl Object {
 struct Tile {
     blocked: bool,
     block_site: bool,
+    explored: bool,
 }
 
 impl Tile {
@@ -70,6 +71,7 @@ impl Tile {
         Tile {
             blocked: false,
             block_site: false,
+            explored: false,
         }
     }
 
@@ -77,6 +79,7 @@ impl Tile {
         Tile {
             blocked: true,
             block_site: true,
+            explored: false,
         }
     }
 }
@@ -150,10 +153,10 @@ fn main() {
 
     // Set up player, npc and vector of objects (players are objects)
     let player = Object::new(0, 0, '@', WHITE);
-    let npc = Object::new(SCREEN_WIDTH / 2 - 5, SCREEN_HEIGHT / 2, '@', YELLOW);
+    let npc = Object::new(SCREEN_WIDTH / 2 - 5, SCREEN_HEIGHT / 2, '@', SEA);
     let mut objects = vec![player, npc];
 
-    let game = Game {
+    let mut game = Game {
         map: make_map(&mut objects[0]),
     };
 
@@ -177,7 +180,7 @@ fn main() {
         tcod.con.clear();
 
         let fov_recompute = previous_player_position != (objects[0].x, objects[0].y);
-        render_all(&mut tcod, &game, &objects, fov_recompute);
+        render_all(&mut tcod, &mut game, &objects, fov_recompute);
                 
         tcod.root.flush();
 
@@ -260,7 +263,7 @@ fn make_map(player: &mut Object) -> Map {
     map
 }
 
-fn render_all(tcod: &mut Tcod, game: &Game, objects: &[Object], fov_recompute: bool) {
+fn render_all(tcod: &mut Tcod, game: &mut Game, objects: &[Object], fov_recompute: bool) {
     // recompute FOV if needed (the player moved or something)
     if fov_recompute {
         let player = &objects[0];
@@ -287,7 +290,13 @@ fn render_all(tcod: &mut Tcod, game: &Game, objects: &[Object], fov_recompute: b
                 (true, false) => COLOR_LIGHT_GROUND,
             };
 
-            tcod.con.set_char_background(x, y, color, BackgroundFlag::Set);
+            let is_explored = &mut game.map[x as usize][y as usize].explored;
+            if is_visible {
+                *is_explored = true;
+            }
+            if *is_explored {
+                tcod.con.set_char_background(x, y, color, BackgroundFlag::Set);
+            }
         }
     }
 
