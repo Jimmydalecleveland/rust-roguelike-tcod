@@ -99,10 +99,20 @@ impl Rect {
     }
 
     pub fn intersects_with(&self, other: &Rect) -> bool {
-        (self.x1 <= other.x2) 
-            && (self.x2  >= other.x1) 
-            && (self.y1 <= other.y2) 
-            && (self.y2 >= other.y1)
+        // If either of these conditions is false, then the rectangles cannot intersect.
+        // If both of these conditons are true, then the rectangles can intersect
+        // on the X axis.
+        let intersects_on_x_axis = (self.x1 <= other.x2) 
+            && (self.x2  >= other.x1);
+
+        // If either of these conditions is false, then the rectangles cannot intersect.
+        // If both of these conditons are true, then the rectangles can intersect
+        // on the Y axis.
+        let intersects_on_y_axis = (self.y1 <= other.y2) 
+            && (self.y2 >= other.y1);
+
+        // If both of these conditions are true, then the rectangles intersect.
+        intersects_on_x_axis && intersects_on_y_axis
     }
 }
 
