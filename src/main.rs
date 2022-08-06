@@ -1,5 +1,6 @@
 use tcod::colors::*;
 use tcod::console::*;
+use tcod::map::{FovAlgorithm, Map as FovMap};
 use std::cmp;
 use rand::Rng;
 
@@ -8,15 +9,21 @@ const SCREEN_HEIGHT: i32 = 50;
 const MAP_WIDTH: i32 = 80;
 const MAP_HEIGHT: i32 = 45;
 const COLOR_DARK_WALL: Color = Color { r: 0, g: 0, b: 100 };
+const COLOR_LIGHT_WALL: Color = Color { r: 130, g: 110, b: 50 };
 const COLOR_DARK_GROUND: Color = Color { r: 50, g: 50, b: 150 };
+const COLOR_LIGHT_GROUND: Color = Color { r: 200, g: 180, b: 50 };
 const ROOM_MAX_SIZE: i32 = 10;
 const ROOM_MIN_SIZE: i32 = 6;
 const MAX_ROOMS: i32 = 30;
 const LIMIT_FPS: i32 = 20;
+const FOV_ALGO: FovAlgorithm = FovAlgorithm::Basic;
+const FOV_LIGHT_WALLS: bool = true;
+const TORCH_RADIUS: i32 = 10;
 
 struct Tcod {
     root: Root,
     con: Offscreen,
+    fov: FovMap,
 }
 
 /// This is a generic object: the player, a monster, an item, the stairs...
@@ -129,6 +136,7 @@ struct Game {
 }
 
 fn main() {
+    // Set up Tcod fields
     tcod::system::set_fps(LIMIT_FPS);
     let root = Root::initializer()
         .font("arial10x10.png", FontLayout::Tcod)
@@ -136,10 +144,11 @@ fn main() {
         .size(SCREEN_WIDTH, SCREEN_HEIGHT)
         .title("Rust/libtcod tutorial")
         .init();
-
     let con = Offscreen::new(MAP_WIDTH, MAP_HEIGHT);
+    let fov = FovMap::new(MAP_WIDTH, MAP_HEIGHT);
+    let mut tcod = Tcod { root, con, fov };
 
-    let mut tcod = Tcod { root, con };
+    // Set up player, npc and vector of objects (players are objects)
     let player = Object::new(0, 0, '@', WHITE);
     let npc = Object::new(SCREEN_WIDTH / 2 - 5, SCREEN_HEIGHT / 2, '@', YELLOW);
     let mut objects = vec![player, npc];
@@ -148,10 +157,27 @@ fn main() {
         map: make_map(&mut objects[0]),
     };
 
+    // populate the FOV map, according to the generated map
+    for y in 0..MAP_HEIGHT {
+        for x in 0..MAP_WIDTH {
+            tcod.fov.set(
+                x,
+                y,
+                !game.map[x as usize][y as usize].block_site,
+                !game.map[x as usize][y as usize].blocked,
+            );
+        }
+    }
+
+    // force FOV "recompute" first time through the game loop
+    let mut previous_player_position = (-1, -1);
+
+    // Game loop
     while !tcod.root.window_closed() {
         tcod.con.clear();
 
-        render_all(&mut tcod, &game, &objects);
+        let fov_recompute = previous_player_position != (objects[0].x, objects[0].y);
+        render_all(&mut tcod, &game, &objects, fov_recompute);
                 
         tcod.root.flush();
 
@@ -234,21 +260,34 @@ fn make_map(player: &mut Object) -> Map {
     map
 }
 
-fn render_all(tcod: &mut Tcod, game: &Game, objects: &[Object]) {
+fn render_all(tcod: &mut Tcod, game: &Game, objects: &[Object], fov_recompute: bool) {
+    // recompute FOV if needed (the player moved or something)
+    if fov_recompute {
+        let player = &objects[0];
+        tcod.fov.compute_fov(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
+    }
     // draw all objects in the list
     for object in objects {
-        object.draw(&mut tcod.con);
+        if tcod.fov.is_in_fov(object.x, object.y) {
+            object.draw(&mut tcod.con);
+        }
     }
 
     // go through all tiles, and set their background color
     for y in 0..MAP_HEIGHT {
         for x in 0..MAP_WIDTH {
+            let is_visible = tcod.fov.is_in_fov(x, y);
             let is_wall = game.map[x as usize][y as usize].block_site;
-            if is_wall {
-                tcod.con.set_char_background(x, y, COLOR_DARK_WALL, BackgroundFlag::Set);
-            } else {
-                tcod.con.set_char_background(x, y, COLOR_DARK_GROUND, BackgroundFlag::Set);
-            }
+            let color = match (is_visible, is_wall) {
+                // outside of field of view:
+                (false, true) => COLOR_DARK_WALL,
+                (false, false) => COLOR_DARK_GROUND,
+                // inside fov:
+                (true, true) => COLOR_LIGHT_WALL,
+                (true, false) => COLOR_LIGHT_GROUND,
+            };
+
+            tcod.con.set_char_background(x, y, color, BackgroundFlag::Set);
         }
     }
 
