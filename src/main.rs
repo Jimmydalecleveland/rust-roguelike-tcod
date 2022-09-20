@@ -215,14 +215,24 @@ fn main() {
         tcod.root.flush();
 
         previous_player_position = objects[PLAYER].pos();
-        let player_action = handle_keys(&mut tcod, &game.map, &mut objects);
+        let player_action = handle_keys(&mut tcod, &game, &mut objects);
         if player_action == PlayerAction::Exit {
             break;
+        }
+
+        // monsters turn
+        if objects[PLAYER].alive && player_action != PlayerAction::DidntTakeTurn {
+            for object in &objects {
+                // only if object is not player
+                if (object as *const _) != (&objects[PLAYER] as *const _) {
+//                    println!("The {} growls!", object.name);
+                }
+            }
         }
     }
 }
 
-fn handle_keys(tcod: &mut Tcod, map: &Map, objects: &mut [Object]) -> PlayerAction {
+fn handle_keys(tcod: &mut Tcod, game: &Game, objects: &mut [Object]) -> PlayerAction {
     use tcod::input::Key;
     use tcod::input::KeyCode::*;
     use PlayerAction::*;
@@ -233,19 +243,19 @@ fn handle_keys(tcod: &mut Tcod, map: &Map, objects: &mut [Object]) -> PlayerActi
     return match (key, key.text(), player_alive) {
         // movement keys
         (Key { code: Up, .. }, _, true) => {
-            move_by(PLAYER, 0, -1, map, objects);
+            player_move_or_attack(0, -1, game, objects);
             TookTurn
         }
         (Key { code: Down, .. }, _, true) => {
-            move_by(PLAYER, 0, 1, map, objects);
+            player_move_or_attack(0, 1, game, objects);
             TookTurn
         }
         (Key { code: Left, .. }, _, true) => {
-            move_by(PLAYER, -1, 0, map, objects);
+            player_move_or_attack(-1, 0, game, objects);
             TookTurn
         }
         (Key { code: Right, .. }, _, true) => {
-            move_by(PLAYER, 1, 0, map, objects);
+            player_move_or_attack(1, 0, game, objects);
             TookTurn
         }
 
@@ -432,5 +442,27 @@ fn move_by(id: usize, dx: i32, dy: i32, map: &Map, objects: &mut [Object]) {
     let (x, y) = objects[id].pos();
     if !is_blocked(x + dx, y + dy, map, objects) {
         objects[id].set_pos(x + dx, y + dy);
+    }
+}
+
+fn player_move_or_attack(dx: i32, dy: i32, game: &Game, objects: &mut [Object]) {
+    let x = objects[PLAYER].x + dx;
+    let y = objects[PLAYER].y + dy;
+
+    // try to find an attackable object in the forecasted position
+    // js equivalent array.find()
+    let target_id = objects.iter().position(|object| object.pos() == (x, y));
+
+    // attack if target found, move otherwise
+    match target_id {
+        Some(target_id) => {
+            println!(
+                    "The {} laughts at your puny efforts to attack it.",
+                    objects[target_id].name
+            );
+        }
+        None => {
+            move_by(PLAYER, dx, dy, &game.map, objects);
+        }
     }
 }
