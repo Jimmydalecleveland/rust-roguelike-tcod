@@ -85,6 +85,12 @@ impl Object {
         self.x = x;
         self.y = y;
     }
+
+    pub fn distance_to(&self, other: &Object) -> f32 {
+        let dx = other.x - self.x;
+        let dy = other.y - self.y;
+        ((dx.pow(2) + dy.pow(2)) as f32).sqrt()
+    }
 }
 
 // combat-related properties and methods
@@ -247,10 +253,9 @@ fn main() {
 
         // monsters turn
         if objects[PLAYER].alive && player_action != PlayerAction::DidntTakeTurn {
-            for object in &objects {
-                // only if object is not player
-                if (object as *const _) != (&objects[PLAYER] as *const _) {
-//                    println!("The {} growls!", object.name);
+            for id in 0..objects.len() {
+                if objects[id].ai.is_some() {
+                    ai_take_turn(id, &tcod, &game, &mut objects)
                 }
             }
         }
@@ -451,7 +456,7 @@ fn place_objects(room: Rect, map: &Map, objects: &mut Vec<Object>) {
 
                 orc
             } else {
-                let mut vampire = Object::new(x, y, 'V', "Vampire", DARK_RED, true)
+                let mut vampire = Object::new(x, y, 'V', "Vampire", DARK_RED, true);
                 vampire.fighter = Some(Fighter {
                     max_hp: 16,
                     hp: 16,
@@ -477,8 +482,8 @@ fn is_blocked(x: i32, y: i32, map: &Map, objects: &[Object]) -> bool {
 
     // now check for any blocking objects
     objects
-        .iter()
-        .any(|object| object.blocks && object.pos() == (x, y))
+    .iter()
+    .any(|object| object.blocks && object.pos() == (x, y))
 }
 
 /// move by the given amount
@@ -502,11 +507,39 @@ fn player_move_or_attack(dx: i32, dy: i32, game: &Game, objects: &mut [Object]) 
         Some(target_id) => {
             println!(
                     "The {} laughts at your puny efforts to attack it.",
-                    objects[target_id].name
+            objects[target_id].name
             );
         }
         None => {
             move_by(PLAYER, dx, dy, &game.map, objects);
+        }
+    }
+}
+
+fn move_towards(id: usize, target_x: i32, target_y: i32, map: &Map, objects: &mut [Object]) {
+    // vector from this object to the target, and distance
+    let dx = target_x - objects[id].x;
+    let dy = target_y - objects[id].y;
+    let distance = ((dx.pow(2) + dy.pow(2)) as f32).sqrt();
+
+    // normalize it to length 1 (preserving direction), then round it and
+    // convert to integer so the movement is restricted to the map grid
+    let dx = (dx as f32 / distance).round() as i32;
+    let dy = (dy as f32 / distance).round() as i32;
+    move_by(id, dx, dy, map, objects);
+}
+
+fn ai_take_turn(monster_id: usize, tcod: &Tcod, game: &Game, objects: &mut [Object]) {
+    let (monster_x, monster_y) = objects[monster_id].pos();
+    if tcod.fov.is_in_fov(monster_x, monster_y) {
+        // move towards player if not already next to them
+        if objects[monster_id].distance_to(&objects[PLAYER]) >= 2.0 {
+            let (player_x, player_y) = objects[PLAYER].pos();
+            move_towards(monster_id, player_x, player_y, &game.map, objects);
+        } else if objects[PLAYER].fighter.map_or(false, |f| f.hp > 0) {
+            // monster is close enough to attack if player is alive
+            let monster = &objects[monster_id];
+            println!("The attack of the {} bounces off your armor", monster.name);
         }
     }
 }
