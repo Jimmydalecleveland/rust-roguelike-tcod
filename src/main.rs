@@ -51,6 +51,8 @@ struct Object {
     name: String,
     blocks: bool,
     alive: bool,
+    fighter: Option<Fighter>,
+    ai: Option<Ai>,
 }
 
 impl Object {
@@ -63,6 +65,8 @@ impl Object {
             color,
             alive: false,
             blocks,
+            fighter: None,
+            ai: None,
         }
     }
 
@@ -81,6 +85,20 @@ impl Object {
         self.x = x;
         self.y = y;
     }
+}
+
+// combat-related properties and methods
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Fighter {
+    max_hp: i32,
+    hp: i32,
+    defense: i32,
+    power: i32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Ai {
+    Basic,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -184,6 +202,13 @@ fn main() {
     // Set up player, npc and vector of objects (players are objects)
     let mut player = Object::new(0, 0, '@', "player", WHITE, true);
     player.alive = true;
+    player.fighter = Some(Fighter {
+            max_hp: 30,
+            hp: 30,
+            defense: 2,
+            power: 5,
+        });
+
     let mut objects = vec![player];
 
     let mut game = Game {
@@ -332,6 +357,7 @@ fn render_all(tcod: &mut Tcod, game: &mut Game, objects: &[Object], fov_recomput
     // recompute FOV if needed (the player moved or something)
     if fov_recompute {
         let player = &objects[PLAYER];
+
         tcod.fov
             .compute_fov(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
     }
@@ -414,9 +440,27 @@ fn place_objects(room: Rect, map: &Map, objects: &mut Vec<Object>) {
         if !is_blocked(x, y, map, objects) {
             let mut monster = if rand::random::<f32>() < 0.8 {
                 // 80% chance of getting an orc
-                Object::new(x, y, 'o', "orc", DESATURATED_GREEN, true)
+                let mut orc = Object::new(x, y, 'o', "orc", DESATURATED_GREEN, true);
+                orc.fighter = Some(Fighter {
+                    max_hp: 10,
+                    hp: 10,
+                    defense: 0,
+                    power: 3,
+                });
+                orc.ai = Some(Ai::Basic);
+
+                orc
             } else {
-                Object::new(x, y, 'V', "Vampire", DARK_RED, true)
+                let mut vampire = Object::new(x, y, 'V', "Vampire", DARK_RED, true)
+                vampire.fighter = Some(Fighter {
+                    max_hp: 16,
+                    hp: 16,
+                    defense: 1,
+                    power: 4,
+                });
+                vampire.ai = Some(Ai::Basic);
+
+                vampire
             };
 
             monster.alive = true;
