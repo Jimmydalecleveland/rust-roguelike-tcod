@@ -97,7 +97,18 @@ impl Object {
             if damage > 0 {
                 fighter.hp -= damage;
             }
+            if fighter.hp <= 0 {
+                self.alive = false;
+                fighter.on_death.callback(self);
+            }
         }
+        // check for death and call death function
+//        if let Some(fighter) = self.fighter {
+//            if fighter.hp <= 0 {
+//                self.alive = false;
+//                fighter.on_death.callback(self);
+//            }
+//        }
     }
 
     pub fn attack(&mut self, target: &mut Object) {
@@ -125,6 +136,24 @@ struct Fighter {
     hp: i32,
     defense: i32,
     power: i32,
+    on_death: DeathCallback,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum DeathCallback {
+    Player,
+    Monster,
+}
+
+impl DeathCallback {
+    fn callback(self, object: &mut Object) {
+        use DeathCallback::*;
+        let callback: fn(&mut Object) = match self {
+            Player => player_death,
+            Monster => monster_death,
+        };
+        callback(object);
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -238,6 +267,7 @@ fn main() {
         hp: 30,
         defense: 2,
         power: 5,
+        on_death: DeathCallback::Player,
     });
 
     let mut objects = vec![player];
@@ -488,6 +518,7 @@ fn place_objects(room: Rect, map: &Map, objects: &mut Vec<Object>) {
                     hp: 10,
                     defense: 0,
                     power: 3,
+                    on_death: DeathCallback::Monster,
                 });
                 orc.ai = Some(Ai::Basic);
 
@@ -499,6 +530,7 @@ fn place_objects(room: Rect, map: &Map, objects: &mut Vec<Object>) {
                     hp: 16,
                     defense: 1,
                     power: 4,
+                    on_death: DeathCallback::Monster,
                 });
                 vampire.ai = Some(Ai::Basic);
 
@@ -589,4 +621,24 @@ fn mut_two<T>(first_index: usize, second_index: usize, items: &mut [T]) -> (&mut
     } else {
         (&mut second_slice[0], &mut first_slice[second_index])
     }
+}
+
+fn player_death(player: &mut Object) {
+    // game over
+    println!("You died!");
+
+    // transform player into corpse
+    player.char = '%';
+    player.color = RED;
+}
+
+fn monster_death(monster: &mut Object) {
+    // transform it into a corpse
+    println!("{} is dead!", monster.name);
+    monster.char = '%';
+    monster.color = RED;
+    monster.blocks = false;
+    monster.fighter = None;
+    monster.ai = None;
+    monster.name = format!("remains of {}", monster.name);
 }
