@@ -103,12 +103,12 @@ impl Object {
             }
         }
         // check for death and call death function
-        //        if let Some(fighter) = self.fighter {
-        //            if fighter.hp <= 0 {
-        //                self.alive = false;
-        //                fighter.on_death.callback(self);
-        //            }
-        //        }
+        if let Some(fighter) = self.fighter {
+            if fighter.hp <= 0 {
+                self.alive = false;
+                fighter.on_death.callback(self);
+            }
+        }
     }
 
     pub fn attack(&mut self, target: &mut Object) {
