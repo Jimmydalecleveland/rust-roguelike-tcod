@@ -103,12 +103,12 @@ impl Object {
             }
         }
         // check for death and call death function
-//        if let Some(fighter) = self.fighter {
-//            if fighter.hp <= 0 {
-//                self.alive = false;
-//                fighter.on_death.callback(self);
-//            }
-//        }
+        //        if let Some(fighter) = self.fighter {
+        //            if fighter.hp <= 0 {
+        //                self.alive = false;
+        //                fighter.on_death.callback(self);
+        //            }
+        //        }
     }
 
     pub fn attack(&mut self, target: &mut Object) {
@@ -118,7 +118,7 @@ impl Object {
                 "{} attacks {} for {} hit points.",
                 self.name, target.name, damage
             );
-            
+
             target.take_damage(damage);
         } else {
             println!(
@@ -551,8 +551,8 @@ fn is_blocked(x: i32, y: i32, map: &Map, objects: &[Object]) -> bool {
 
     // now check for any blocking objects
     objects
-    .iter()
-    .any(|object| object.blocks && object.pos() == (x, y))
+        .iter()
+        .any(|object| object.blocks && object.pos() == (x, y))
 }
 
 /// move by the given amount
@@ -569,7 +569,9 @@ fn player_move_or_attack(dx: i32, dy: i32, game: &Game, objects: &mut [Object]) 
 
     // try to find an attackable object in the forecasted position
     // js equivalent array.find()
-    let target_id = objects.iter().position(|object| object.pos() == (x, y));
+    let target_id = objects
+        .iter()
+        .position(|object| object.fighter.is_some() && object.pos() == (x, y));
 
     // attack if target found, move otherwise
     match target_id {
