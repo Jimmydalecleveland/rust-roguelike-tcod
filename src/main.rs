@@ -421,11 +421,17 @@ fn render_all(tcod: &mut Tcod, game: &mut Game, objects: &[Object], fov_recomput
         tcod.fov
             .compute_fov(player.x, player.y, TORCH_RADIUS, FOV_LIGHT_WALLS, FOV_ALGO)
     }
+
+    let mut to_draw: Vec<&Object> = objects
+        .iter()
+        .filter(|o| tcod.fov.is_in_fov(o.x, o.y))
+        .collect();
+    // sort non-blocking objects to the beginning
+    to_draw.sort_by(|o1, o2| o1.blocks.cmp(&o2.blocks));
+
     // draw all objects in the list
-    for object in objects {
-        if tcod.fov.is_in_fov(object.x, object.y) {
-            object.draw(&mut tcod.con);
-        }
+    for object in &to_draw {
+        object.draw(&mut tcod.con);
     }
 
     // go through all tiles, and set their background color
