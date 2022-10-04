@@ -479,17 +479,6 @@ fn render_all(tcod: &mut Tcod, game: &mut Game, objects: &[Object], fov_recomput
         1.0,
     );
 
-    tcod.root.set_default_foreground(WHITE);
-    if let Some(fighter) = objects[PLAYER].fighter {
-        tcod.root.print_ex(
-                1,
-        SCREEN_HEIGHT - 2,
-        BackgroundFlag::None,
-        TextAlignment::Left,
-        format!("HP: {}/{} ", fighter.hp, fighter.max_hp),
-        );
-    }
-
     // GUI
     tcod.panel.set_default_background(BLACK);
     tcod.panel.clear();
@@ -684,9 +673,11 @@ fn render_bar(
 ) {
     let bar_width = (value as f32 / maximum as f32 * total_width as f32) as i32;
 
+    // bar background
     panel.set_default_background(back_color);
     panel.rect(x, y, total_width, 1, false, BackgroundFlag::Screen);
 
+    // bar forground
     panel.set_default_background(bar_color);
     if bar_width > 0 {
         panel.rect(x, y, bar_width, 1, false, BackgroundFlag::Screen);
